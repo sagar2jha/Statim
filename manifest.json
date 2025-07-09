@@ -1,20 +1,39 @@
 {
   "name": "Statim",
-  "description": "Makes the first claim of the patent static in patents.google.com",
-  "version": "1.4",
+  "description": "Smart patent navigation tool for Google Patents.",
+  "version": "2.0",
+  "manifest_version": 2,
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://patents.google.com/*",
+    "https://your-server-url.com/"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "32": "icons/icon_statim32.png"
+    }
+  },
+  "icons": {
+    "128": "icons/icon_statim128.png"
+  },
+  "background": {
+    "service_worker": "js/background.js"
+  },
   "content_scripts": [
     {
-      "matches": ["https://patents.google.com/patent/*"],
-      "css": ["sheet.css"]
+      "matches": [
+        "https://patents.google.com/patent/*"
+      ],
+      "css": [
+        "css/style.css"
+      ],
+      "js": [
+        "js/content.js"
+      ]
     }
-  ],
-  "manifest_version": 2,
-    "page_action": {
-      "default_icon": {
-        "32": "icons/icon_statim32.png"
-      }
-    },
-    "icons":{
-      "128" : "icons/icon_statim128.png"
-    }
+  ]
 }
