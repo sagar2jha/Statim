@@ -1,15 +1,15 @@
 {
   "name": "Statim",
-  "description": "Smart patent navigation tool for Google Patents.",
-  "version": "2.0",
-  "manifest_version": 2,
+  "description": "Displays all patent claims in a sidebar for easy reference on Google Patents.",
+  "version": "3.1",
+  "manifest_version": 3,
   "permissions": [
     "storage",
     "tabs"
   ],
   "host_permissions": [
     "https://patents.google.com/*",
-    "https://your-server-url.com/"
+    "https://statim-gemini-proxy-721411612148.asia-south2.run.app/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -33,6 +33,16 @@
       ],
       "js": [
         "js/content.js"
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "css/style.css"
+      ],
+      "matches": [
+        "https://patents.google.com/*"
       ]
     }
   ]
