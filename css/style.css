@@ -7,8 +7,8 @@
     height: 450px;
     min-width: 250px;
     min-height: 200px;
-    background-color: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(10px);
+    background-color: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(8px);
     border: 1px solid #b8b8b8;
     border-radius: 8px;
     box-shadow: 0 8px 25px rgba(0,0,0,0.2);
@@ -20,7 +20,7 @@
 
 .statim-window-header {
     padding: 10px 15px;
-    background-color: rgba(230, 230, 230, 0.8);
+    background-color: rgba(230, 230, 230, 0.7);
     border-bottom: 1px solid #b8b8b8;
     cursor: move;
     border-top-left-radius: 8px;
@@ -156,34 +156,33 @@ div.claim:hover > .statim-pin-btn {
     font-size: 13px;
 }
 
-/* Final styles for the Patent List Navigator */
-#statim-navigator {
-    padding: 10px 15px;
+/* FIX: New, definitive styles for the Patent List Navigator */
+#statim-navigator-wrapper {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-right: 20px;
+}
+
+#statim-navigator {
+    display: flex;
+    gap: 8px;
     align-items: center;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    width: 100%;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .statim-navigator-info {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     color: #fff;
-}
-
-.statim-navigator-buttons {
-    display: flex;
-    gap: 8px;
+    margin-top: 4px;
 }
 
 .statim-navigator-btn {
     text-decoration: none;
     color: #1a73e8;
     background-color: #fff;
-    padding: 4px 10px;
-    border-radius: 5px;
+    padding: 2px 8px;
+    border-radius: 4px;
     font-size: 12px;
     font-weight: 600;
     transition: background-color 0.2s, color 0.2s;
