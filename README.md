@@ -9,7 +9,7 @@ Statim is a browser extension designed to enhance the patent research and analys
 * **AI-Powered Scope Analysis:** For a deeper analysis, use the "Check Scope (AI)" button. The AI will read the relevant portions of the description and highlight the sentences that are conceptually related to your selected phrase.
 * **AI-Generated Summaries:** Get up to speed on any patent instantly. The "Summarize (AI)" button provides a concise, one-paragraph summary of the patent's core invention.
 * **Patent List Navigator:** Load a list of patent numbers through the extension's popup. A navigator bar will then appear on the patent page, allowing you to seamlessly move between documents with "Next" and "Prev" buttons.
-* **Secure Backend:** All AI features are processed through a secure backend server, ensuring that your API key is never exposed on the client-side.
+* **Secure Backend:** All AI features are processed through a secure backend server, ensuring that your entered information is never exposed on the client-side.
 
 ## Getting Started
 
