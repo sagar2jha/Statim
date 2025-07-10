@@ -1,12 +1,11 @@
-// Statim v4.0 - Final Production Code
+// This is the final, production-ready version with the definitive paragraph filtering engine.
 
-console.log('Statim: Production Version Loaded.');
+console.log('Statim: Production Version Loaded (v40 - Final Navigator Placement).');
 
 const STATIM_WINDOW_ID = 'statim-movable-window';
 const STATIM_AI_HIGHLIGHT_CLASS = 'statim-highlight';
 const STATIM_SIMPLE_HIGHLIGHT_CLASS = 'statim-simple-highlight';
 const STATIM_IRRELEVANT_CLASS = 'statim-irrelevant';
-const SERVER_URL = 'https://your-server-url.com/api/gemini'; // Replace with your deployed server URL
 
 /**
  * Creates the movable and resizable window pane.
@@ -40,7 +39,9 @@ function createMovableWindow() {
     const content = windowPane.querySelector('.statim-window-content');
     const scopeBtn = document.getElementById('statim-ai-btn');
     const summaryBtn = document.getElementById('statim-summary-btn');
-    
+    const summaryDisplay = document.getElementById('statim-summary-display');
+
+    // Drag, Resize, and Close Logic
     let isDragging = false, isResizing = false;
     let dragOffsetX, dragOffsetY;
     
@@ -66,8 +67,10 @@ function createMovableWindow() {
     document.onmouseup = () => { isDragging = false; isResizing = false; };
     windowPane.querySelector('.statim-close-btn').onclick = () => { windowPane.style.display = 'none'; clearHighlights(); };
 
+    // Text selection listener
     content.addEventListener('mouseup', () => handleTextSelection(scopeBtn));
 
+    // Scope Button click listener
     scopeBtn.onclick = () => {
         const selection = window.getSelection();
         const selectedText = selection.toString().trim();
@@ -80,13 +83,17 @@ function createMovableWindow() {
         }
     };
 
+    // Summary Button click listener
     summaryBtn.onclick = () => {
         summaryBtn.textContent = 'Summarizing...';
         summaryBtn.disabled = true;
-        generatePatentSummary(document.getElementById('statim-summary-display'), summaryBtn);
+        generatePatentSummary(summaryDisplay, summaryBtn);
     };
 }
 
+/**
+ * Updates the content of the movable window.
+ */
 function showClaimInWindow(claimElement) {
     const windowPane = document.getElementById(STATIM_WINDOW_ID);
     if (!windowPane) return;
@@ -102,6 +109,7 @@ function showClaimInWindow(claimElement) {
     claimDisplay.innerHTML = '';
     claimDisplay.appendChild(claimClone);
     
+    // Reset summary view when a new claim is pinned
     summaryDisplay.innerHTML = '';
     summaryDisplay.style.display = 'none';
     summaryBtn.textContent = 'Summarize (AI)';
@@ -110,6 +118,9 @@ function showClaimInWindow(claimElement) {
     windowPane.style.display = 'flex';
 }
 
+/**
+ * Adds a "Pin Claim" button to each claim.
+ */
 function initializeClaimButtons() {
     const claims = document.querySelectorAll('div.claim[num]:not([data-statim-processed])');
     claims.forEach((claim) => {
@@ -126,6 +137,10 @@ function initializeClaimButtons() {
     });
 }
 
+/**
+ * --- Search & AI Scope Check Feature ---
+ */
+
 function handleTextSelection(scopeBtn) {
     const selectedText = window.getSelection().toString().trim();
     if (selectedText.length > 2) {
@@ -140,11 +155,19 @@ function handleTextSelection(scopeBtn) {
 function clearHighlights() {
     const descriptionElement = document.querySelector('section#description');
     if (!descriptionElement) return;
-    descriptionElement.querySelectorAll(`.${STATIM_IRRELEVANT_CLASS}`).forEach(el => el.classList.remove(STATIM_IRRELEVANT_CLASS));
+
+    // Un-hide any hidden paragraphs
+    descriptionElement.querySelectorAll(`.${STATIM_IRRELEVANT_CLASS}`).forEach(el => {
+        el.classList.remove(STATIM_IRRELEVANT_CLASS);
+    });
+
+    // Remove highlight marks
     descriptionElement.querySelectorAll(`.${STATIM_AI_HIGHLIGHT_CLASS}, .${STATIM_SIMPLE_HIGHLIGHT_CLASS}`).forEach(el => {
         const parent = el.parentNode;
         if (parent) {
-            while (el.firstChild) parent.insertBefore(el.firstChild, el);
+            while (el.firstChild) {
+                parent.insertBefore(el.firstChild, el);
+            }
             parent.removeChild(el);
             parent.normalize();
         }
@@ -173,30 +196,14 @@ function performSimpleSearch(selectedText) {
     highlightUsingRegex(descriptionElement, highlightRegex, STATIM_SIMPLE_HIGHLIGHT_CLASS);
 }
 
-async function callBackend(prompt) {
-    const payload = { 
-        prompt,
-        safetySettings: [
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-        ],
-    };
-    const response = await fetch(SERVER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-    if (!response.ok) throw new Error(`Server Error: ${response.status} ${response.statusText}`);
-    return await response.json();
-}
-
+/**
+ * FIXED: Properly structured API call for Gemini via proxy
+ */
 async function findInDescriptionWithAI(selectedText, fullClaimText, scopeBtn) {
     clearHighlights();
     const descriptionElement = document.querySelector('section#description');
     if (!descriptionElement) {
-        scopeBtn.textContent = 'Error: No description';
+        resetButton(scopeBtn, 'Error: No description');
         return;
     }
     
@@ -205,12 +212,12 @@ async function findInDescriptionWithAI(selectedText, fullClaimText, scopeBtn) {
     const focusedDescriptionText = relevantParagraphs.map(p => p.innerText).join('\n\n');
 
     if (focusedDescriptionText.length < 10) {
-        scopeBtn.textContent = 'No relevant text found';
-        setTimeout(() => { scopeBtn.textContent = 'Check Scope (AI)'; scopeBtn.disabled = true; }, 2000);
+        resetButton(scopeBtn, 'No relevant text found');
         return;
     }
 
     const prompt = `You are a patent analysis assistant acting as an expert in claim construction. The user has selected a key phrase from a patent claim. Your task is to find all sentences in the provided patent description text that define, explain, or provide essential context for this phrase. Think about the meaning and the concepts, not just the literal words.
+
 FULL CLAIM CONTEXT: "${fullClaimText}"
 USER'S SELECTED PHRASE: "${selectedText}"
 TASK: From the provided patent description text, extract every complete sentence that is conceptually relevant to the user's selected phrase. Return ONLY these exact sentences, each on a new line.
@@ -221,56 +228,201 @@ ${focusedDescriptionText}
 ---`;
 
     try {
-        const result = await callBackend(prompt);
-        if (result.candidates && result.candidates[0].content.parts[0].text) {
-            const foundSentences = result.candidates[0].content.parts[0].text.split('\n').filter(s => s.trim() !== '');
-            manageParagraphVisibility(descriptionElement, foundSentences, true);
-            const pattern = foundSentences.map(s => s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|');
-            const regex = new RegExp(pattern, 'g');
-            highlightUsingRegex(descriptionElement, regex, STATIM_AI_HIGHLIGHT_CLASS);
+        // FIXED: Proper payload structure for Gemini API
+        const payload = {
+            contents: [{
+                parts: [{
+                    text: prompt
+                }]
+            }],
+            generationConfig: {
+                temperature: 0.2,
+                topK: 1,
+                topP: 1,
+                maxOutputTokens: 8192,
+            },
+            safetySettings: [
+                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+            ],
+        };
+
+        const proxyServerUrl = 'https://statim-gemini-proxy-721411612148.asia-south2.run.app/gemini';
+
+        const response = await fetch(proxyServerUrl, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Proxy Server Error: ${response.status} ${response.statusText} - ${errorText}`);
         }
-        scopeBtn.textContent = 'Check Scope (AI)';
-        scopeBtn.disabled = true;
+
+        const result = await response.json();
+        
+        // FIXED: Better error handling and response parsing
+        if (result.error) {
+            throw new Error(result.error.message || 'Unknown API error');
+        }
+
+        if (result.candidates && result.candidates.length > 0 && 
+            result.candidates[0].content && result.candidates[0].content.parts && 
+            result.candidates[0].content.parts.length > 0) {
+            
+            const responseText = result.candidates[0].content.parts[0].text;
+            const foundSentences = responseText.split('\n').filter(s => s.trim() !== '');
+            
+            if (foundSentences.length > 0) {
+                manageParagraphVisibility(descriptionElement, foundSentences, true);
+                
+                const pattern = foundSentences.map(s => s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|');
+                const regex = new RegExp(pattern, 'g');
+                highlightUsingRegex(descriptionElement, regex, STATIM_AI_HIGHLIGHT_CLASS);
+            }
+        } else {
+            throw new Error('No valid response from API');
+        }
+        
+        resetButton(scopeBtn, 'Check Scope (AI)', true);
+
     } catch (error) {
-        console.error("Statim: Error calling server:", error);
-        scopeBtn.textContent = 'Server Error';
+        console.error("Statim: Error calling Gemini API via proxy:", error);
+        scopeBtn.textContent = 'API Error';
         scopeBtn.title = error.message;
         scopeBtn.style.backgroundColor = '#dc3545';
         scopeBtn.disabled = false;
+        
+        // Reset after 3 seconds
+        setTimeout(() => {
+            resetButton(scopeBtn, 'Check Scope (AI)', true);
+        }, 3000);
     }
 }
 
+/**
+ * FIXED: Properly structured API call for patent summary
+ */
 async function generatePatentSummary(summaryDisplay, summaryBtn) {
     const abstract = document.querySelector('section#abstract .abstract-text')?.innerText || '';
     const claims = document.querySelector('section#claims')?.innerText || '';
     const description = document.querySelector('section#description')?.innerText || '';
+
     const fullPatentText = `ABSTRACT:\n${abstract}\n\nCLAIMS:\n${claims}\n\nDESCRIPTION:\n${description}`;
-    const prompt = `You are a patent summarization expert. Based on the full text of the patent provided below, generate a concise, one-paragraph summary of the core invention. Focus on the problem being solved and the proposed solution.\n\nPATENT TEXT:\n---\n${fullPatentText}\n---`;
+
+    const prompt = `You are a patent summarization expert. Based on the full text of the patent provided below (including abstract, claims, and description), generate a concise, one-paragraph summary of the core invention. Focus on the problem being solved and the proposed solution.
+
+PATENT TEXT:
+---
+${fullPatentText}
+---`;
 
     try {
-        const result = await callBackend(prompt);
-        if (result.candidates && result.candidates[0].content.parts[0].text) {
-            summaryDisplay.innerHTML = `<h4>AI Summary</h4><p><em>${result.candidates[0].content.parts[0].text}</em></p>`;
-            summaryDisplay.style.display = 'block';
+        // FIXED: Proper payload structure for Gemini API
+        const payload = {
+            contents: [{
+                parts: [{
+                    text: prompt
+                }]
+            }],
+            generationConfig: {
+                temperature: 0.2,
+                topK: 1,
+                topP: 1,
+                maxOutputTokens: 8192,
+            },
+            safetySettings: [
+                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+            ],
+        };
+        
+        const proxyServerUrl = 'https://statim-gemini-proxy-721411612148.asia-south2.run.app/gemini';
+
+        const response = await fetch(proxyServerUrl, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Proxy Server Error: ${response.status} ${response.statusText} - ${errorText}`);
         }
+
+        const result = await response.json();
+
+        // FIXED: Better error handling and response parsing
+        if (result.error) {
+            throw new Error(result.error.message || 'Unknown API error');
+        }
+
+        if (result.candidates && result.candidates.length > 0 && 
+            result.candidates[0].content && result.candidates[0].content.parts && 
+            result.candidates[0].content.parts.length > 0) {
+            
+            const responseText = result.candidates[0].content.parts[0].text;
+            summaryDisplay.innerHTML = `<h4>AI Summary</h4><p><em>${responseText}</em></p>`;
+            summaryDisplay.style.display = 'block';
+        } else {
+            throw new Error('No valid response from API');
+        }
+        
         summaryBtn.textContent = 'Summarize (AI)';
         summaryBtn.disabled = false;
+        summaryBtn.style.backgroundColor = '';
+        summaryBtn.title = '';
+
     } catch (error) {
-        console.error("Statim: Error calling server for summary:", error);
-        summaryBtn.textContent = 'Server Error';
+        console.error("Statim: Error calling Gemini API for summary via proxy:", error);
+        summaryBtn.textContent = 'API Error';
         summaryBtn.title = error.message;
         summaryBtn.style.backgroundColor = '#dc3545';
         summaryBtn.disabled = false;
+        
+        // Reset after 3 seconds
+        setTimeout(() => {
+            summaryBtn.textContent = 'Summarize (AI)';
+            summaryBtn.disabled = false;
+            summaryBtn.style.backgroundColor = '';
+            summaryBtn.title = '';
+        }, 3000);
     }
+}
+
+/**
+ * ADDED: Helper function to reset buttons consistently
+ */
+function resetButton(button, text, shouldDisable = false) {
+    button.textContent = text;
+    button.disabled = shouldDisable;
+    button.style.backgroundColor = '';
+    button.title = '';
 }
 
 function manageParagraphVisibility(container, searchTerms, isSentenceSearch = false) {
     const paragraphs = container.querySelectorAll('.description-paragraph');
+    
     paragraphs.forEach(p => {
         const paragraphText = p.innerText.toLowerCase();
         const isRelevant = searchTerms.some(term => paragraphText.includes(isSentenceSearch ? term.toLowerCase() : term));
-        if (!isRelevant) p.classList.add(STATIM_IRRELEVANT_CLASS);
-        else p.classList.remove(STATIM_IRRELEVANT_CLASS);
+        
+        if (!isRelevant) {
+            p.classList.add(STATIM_IRRELEVANT_CLASS);
+        } else {
+            p.classList.remove(STATIM_IRRELEVANT_CLASS);
+        }
     });
 }
 
@@ -280,7 +432,9 @@ function getRelevantParagraphs(container, keywords) {
     paragraphs.forEach(p => {
         const paragraphTextLower = p.innerText.toLowerCase();
         const isRelevant = keywords.some(keyword => paragraphTextLower.includes(keyword));
-        if (isRelevant) relevantParagraphs.push(p);
+        if (isRelevant) {
+            relevantParagraphs.push(p);
+        }
     });
     return relevantParagraphs;
 }
@@ -289,19 +443,27 @@ function highlightUsingRegex(container, regex, highlightClass) {
     const treeWalker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
     const textNodes = [];
     while (treeWalker.nextNode()) {
-        if (treeWalker.currentNode.parentElement.offsetParent !== null) textNodes.push(treeWalker.currentNode);
+        if(treeWalker.currentNode.parentElement.offsetParent !== null) {
+            textNodes.push(treeWalker.currentNode);
+        }
     }
+
     let firstMatchElement = null;
+
     textNodes.forEach(node => {
         if (regex.test(node.textContent)) {
             const parent = node.parentNode;
             if(!parent) return;
+            
             const fragment = document.createDocumentFragment();
             let lastIndex = 0;
             let match;
             regex.lastIndex = 0; 
+
             while ((match = regex.exec(node.textContent)) !== null) {
-                if (match.index > lastIndex) fragment.appendChild(document.createTextNode(node.textContent.substring(lastIndex, match.index)));
+                if (match.index > lastIndex) {
+                    fragment.appendChild(document.createTextNode(node.textContent.substring(lastIndex, match.index)));
+                }
                 const mark = document.createElement('mark');
                 mark.className = highlightClass;
                 mark.textContent = match[0];
@@ -309,39 +471,86 @@ function highlightUsingRegex(container, regex, highlightClass) {
                 if (!firstMatchElement) firstMatchElement = mark;
                 lastIndex = regex.lastIndex;
             }
-            if (lastIndex < node.textContent.length) fragment.appendChild(document.createTextNode(node.textContent.substring(lastIndex)));
+
+            if (lastIndex < node.textContent.length) {
+                fragment.appendChild(document.createTextNode(node.textContent.substring(lastIndex)));
+            }
             parent.replaceChild(fragment, node);
         }
     });
-    if (firstMatchElement) firstMatchElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    if (firstMatchElement) {
+        firstMatchElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 }
 
+/**
+ * FIX: New, definitive function to inject the patent list navigator.
+ */
 function injectPatentNavigator() {
     chrome.storage.local.get(['patentList'], (result) => {
         const patentList = result.patentList;
         if (!patentList || patentList.length <= 1) return;
+
         const match = window.location.pathname.match(/\/patent\/([^/]+)/);
         if (!match) return;
         const currentPatentId = match[1];
-        const currentIndex = patentList.findIndex(p => p.replace(/,/g, '').replace(/\s/g, '').toLowerCase() === currentPatentId.toLowerCase());
+
+        const currentIndex = patentList.findIndex(p => {
+            const cleanedP = p.replace(/,/g, '').replace(/\s/g, '');
+            return currentPatentId.toLowerCase() === cleanedP.toLowerCase();
+        });
+
         if (currentIndex === -1) return;
+
         const prevPatent = patentList[currentIndex - 1];
         const nextPatent = patentList[currentIndex + 1];
+
+        // This is the most stable anchor point for the blue bibliographic pane.
         const anchorElement = document.querySelector('section.knowledge-card header');
         if (!anchorElement || document.getElementById('statim-navigator')) return;
+
+        // Create a wrapper for our new elements
+        const wrapper = document.createElement('div');
+        wrapper.id = 'statim-navigator-wrapper';
+
+        // Create the navigator div
         const navigatorDiv = document.createElement('div');
         navigatorDiv.id = 'statim-navigator';
-        let html = `<div class="statim-navigator-info">Patent List (${currentIndex + 1} of ${patentList.length})</div><div class="statim-navigator-buttons">`;
-        if (prevPatent) html += `<a href="https://patents.google.com/patent/${prevPatent.replace(/,/g, '').replace(/\s/g, '')}/en" class="statim-navigator-btn">‹ Prev</a>`;
-        else html += `<span class="statim-navigator-btn disabled">‹ Prev</span>`;
-        if (nextPatent) html += `<a href="https://patents.google.com/patent/${nextPatent.replace(/,/g, '').replace(/\s/g, '')}/en" class="statim-navigator-btn">Next ›</a>`;
-        else html += `</div>`;
-        html += `</div>`;
-        navigatorDiv.innerHTML = html;
-        anchorElement.parentNode.insertBefore(navigatorDiv, anchorElement.nextSibling);
+
+        let buttonsHtml = `<div class="statim-navigator-buttons">`;
+        if (prevPatent) {
+            const cleanedPrev = prevPatent.replace(/,/g, '').replace(/\s/g, '');
+            buttonsHtml += `<a href="https://patents.google.com/patent/${cleanedPrev}/en" class="statim-navigator-btn">‹ Prev</a>`;
+        } else {
+            buttonsHtml += `<span class="statim-navigator-btn disabled">‹ Prev</span>`;
+        }
+        if (nextPatent) {
+            const cleanedNext = nextPatent.replace(/,/g, '').replace(/\s/g, '');
+            buttonsHtml += `<a href="https://patents.google.com/patent/${cleanedNext}/en" class="statim-navigator-btn">Next ›</a>`;
+        } else {
+            buttonsHtml += `<span class="statim-navigator-btn disabled">Next ›</span>`;
+        }
+        buttonsHtml += `</div>`;
+        navigatorDiv.innerHTML = buttonsHtml;
+
+        // Create the info div
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'statim-navigator-info';
+        infoDiv.textContent = `Patent ${currentIndex + 1} of ${patentList.length}`;
+
+        // Add our new elements to the wrapper
+        wrapper.appendChild(navigatorDiv);
+        wrapper.appendChild(infoDiv);
+
+        // Prepend the wrapper to the header to place it on the left
+        anchorElement.prepend(wrapper);
     });
 }
 
+/**
+ * Main initialization logic.
+ */
 function main() {
     createMovableWindow();
     injectPatentNavigator();
@@ -356,4 +565,8 @@ const startupObserver = new MutationObserver((mutations, obs) => {
         obs.disconnect();
     }
 });
-startupObserver.observe(document.body, { childList: true, subtree: true });
+
+startupObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+});
